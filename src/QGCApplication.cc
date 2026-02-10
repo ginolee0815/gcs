@@ -368,7 +368,8 @@ QGCApplication::QGCApplication(int &argc, char* argv[], bool unitTesting)
    }
 #endif /* __mobile__ */
 
-    _checkForNewVersion();
+    // Disable check new version by Gino
+    // _checkForNewVersion();
 }
 
 void QGCApplication::_exitWithError(QString errorMessage)
