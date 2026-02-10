@@ -1,5 +1,5 @@
 # The 32 and 64 bit version of these actions should be kept in sync
-name: Android 32/64-bit Release
+name: Android Release
 
 on:
   push:
@@ -67,8 +67,8 @@ jobs:
           ndk-version: r21e
           add-to-path: false
 
-      - name: Remove Android SDKs to force usage of android-33 only
-        run: ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --list_installed | grep "platforms;android-" | grep -v "platforms;android-33 " | awk '{print $1}' | xargs -I {} ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --uninstall "{}"
+      #- name: Remove Android SDKs to force usage of android-33 only
+      #  run: ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --list_installed | grep "platforms;android-" | grep -v "platforms;android-33 " | awk '{print $1}' | xargs -I {} ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --uninstall "{}"
 
       - name: Install ccache
         run: sudo apt-get install ccache
