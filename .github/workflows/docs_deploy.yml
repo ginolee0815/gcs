@@ -1,20 +1,19 @@
 name: Deploy Docs
 
 on:
-  push:
-    branches:
-      - 'master'
-      - 'Stable*'
-    tags:
-      - 'v*'
-    paths:
-      - docs/**
-  pull_request:
-    branches:
-      - '*'
-    paths:
-      - docs/**
-
+  #  push:
+  #    branches:
+  #      - 'master'
+  #      - 'Stable*'
+  #    tags:
+  #      - 'v*'
+  #    paths:
+  #      - docs/**
+  #  pull_request:
+  #    branches:
+  #      - '*'
+  #    paths:
+  #      - docs/**
   workflow_dispatch:
 
 env:
@@ -60,7 +59,7 @@ jobs:
         with:
           name: qgc_docs_build
           path: ~/_book
-        
+
       - name: Deploy
         run: |
           git clone https://${{ secrets.PX4BUILDBOT_USER }}:${{ secrets.PX4BUILDBOT_ACCESSTOKEN }}@github.com/mavlink/docs.qgroundcontrol.com.git
@@ -73,7 +72,7 @@ jobs:
           git add ${BRANCH_NAME}
           git commit -a -m "QGC docs build update `date`"
           git push origin master
-          
+
         env:
           GIT_USER: ${{ secrets.PX4BUILDBOT_USER }}
           GIT_PASS: ${{ secrets.PX4BUILDBOT_PASS }}

@@ -1,29 +1,30 @@
 name: MacOS Release
 
 on:
-  push:
-    branches:
-      - 'master'
-      - 'Stable*'
-    tags:
-      - 'v*'
-    paths-ignore:
-      - 'docs/**'
-  pull_request:
-    branches:
-    - '*'
-    paths-ignore:
-      - 'docs/**'
+  workflow_dispatch:
+#  push:
+#    branches:
+#      - 'master'
+#      - 'Stable*'
+#    tags:
+#      - 'v*'
+#    paths-ignore:
+#      - 'docs/**'
+#  pull_request:
+#    branches:
+#    - '*'
+#    paths-ignore:
+#      - 'docs/**'
 
 defaults:
   run:
     shell: bash
 
 env:
-  SOURCE_DIR:   ${{ github.workspace }}
-  QT_VERSION:   5.15.2
-  ARTIFACT:     QGroundControl.dmg
-  BUILD_TYPE:   ${{ fromJSON('["DailyBuild", "StableBuild"]')[ github.ref_type == 'tag' || contains(github.ref, 'Stable_' ) ] }}
+  SOURCE_DIR: ${{ github.workspace }}
+  QT_VERSION: 5.15.2
+  ARTIFACT: QGroundControl.dmg
+  BUILD_TYPE: ${{ fromJSON('["DailyBuild", "StableBuild"]')[ github.ref_type == 'tag' || contains(github.ref, 'Stable_' ) ] }}
 
 jobs:
   build:
@@ -40,19 +41,19 @@ jobs:
           submodules: recursive
 
       - name: Get all tags for correct version determination
-        working-directory:  ${{ github.workspace }}
+        working-directory: ${{ github.workspace }}
         run: |
           git fetch --all --tags -f --depth 1
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version:      ${{ env.QT_VERSION }}
-          aqtversion:   ==3.1.*
-          host:         mac
-          target:       desktop
-          dir:          ${{ runner.temp }}
-          modules:      qtcharts
+          version: ${{ env.QT_VERSION }}
+          aqtversion: ==3.1.*
+          host: mac
+          target: desktop
+          dir: ${{ runner.temp }}
+          modules: qtcharts
           setup-python: true
 
       - name: Install Gstreamer
@@ -72,7 +73,7 @@ jobs:
           echo "ARCH=$ARCH" >> $GITHUB_ENV
 
       - name: Create build directory
-        run:  mkdir ${{ runner.temp }}/shadow_build_dir
+        run: mkdir ${{ runner.temp }}/shadow_build_dir
 
       - name: Setup Xcode
         run: |
@@ -118,9 +119,9 @@ jobs:
           overwrite: true
 
       - name: Upload build to S3 Bucket
-        if:                 github.event_name == 'push'
-        working-directory:  ${{ runner.temp }}/shadow_build_dir/package
+        if: github.event_name == 'push'
+        working-directory: ${{ runner.temp }}/shadow_build_dir/package
         run: |
-              aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-              aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-              aws s3 cp ${ARTIFACT} s3://qgroundcontrol/builds/${{ github.ref_name }}/QGroundControl-${{ env.ARCH }}.dmg --region us-west-2 --acl public-read
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws s3 cp ${ARTIFACT} s3://qgroundcontrol/builds/${{ github.ref_name }}/QGroundControl-${{ env.ARCH }}.dmg --region us-west-2 --acl public-read
