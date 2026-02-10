@@ -112,7 +112,8 @@ void VideoSettings::_setDefaults()
     if (_noVideo) {
         _nameToMetaDataMap[videoSourceName]->setRawDefaultValue(videoSourceNoVideo);
     } else {
-        _nameToMetaDataMap[videoSourceName]->setRawDefaultValue(videoDisabled);
+        _nameToMetaDataMap[videoSourceName]->setRawDefaultValue(videoSourceRTSP);
+        // _nameToMetaDataMap[videoSourceName]->setRawDefaultValue(videoDisabled);
     }
 }
 
