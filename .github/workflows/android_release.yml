@@ -77,9 +77,12 @@ jobs:
         run: |
           ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-33" "build-tools;33.0.0"
 
-      - name: Clean Android SDK Extension platforms (Fix ext19 bug)
+      - name: Clean Android SDK platforms (Fix aidl 36 and ext19 bugs)
         run: |
-          find ${ANDROID_SDK_ROOT}/platforms -name "android-*-ext*" -exec rm -rf {} +
+          # Remove all platforms except 33 to prevent AGP/Qt from picking up incompatible folders
+          ls -d ${ANDROID_SDK_ROOT}/platforms/android-* | grep -v "android-33$" | xargs -r rm -rf
+          # Double check and remove any remaining extension folders
+          find ${ANDROID_SDK_ROOT}/platforms -name "*ext*" -exec rm -rf {} +
 
       - name: Install ccache
         run: sudo apt-get install ccache
