@@ -35,7 +35,6 @@ jobs:
         include:
           - architecture: 64bits
             eabi: arm64-v8a
-            ARTIFACT: QGroundControl64.apk
 
     steps:
       - name: Checkout repo
@@ -134,22 +133,26 @@ jobs:
           qmake -r ${SOURCE_DIR}/qgroundcontrol.pro -spec android-clang CONFIG+=${BUILD_TYPE} CONFIG+=installer ANDROID_ABIS="${{ matrix.eabi }}"
           make -j2
 
-      - name: ccache post-run
-        run: ccache -s
+      - name: Get APK filename
+        run: |
+          APK_PATH=$(ls ${{ runner.temp }}/shadow_build_dir/package/QGC_v*.apk | head -n 1)
+          APK_FILENAME=$(basename $APK_PATH)
+          echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
+          echo "APK_FILENAME=$APK_FILENAME" >> $GITHUB_ENV
 
       - name: Save artifact
         uses: actions/upload-artifact@master
         with:
-          name: ${{ matrix.ARTIFACT }}
-          path: ${{ runner.temp }}/shadow_build_dir/package/${{ matrix.ARTIFACT }}
+          name: ${{ env.APK_FILENAME }}
+          path: ${{ env.APK_PATH }}
 
       - name: Publish artifact to GitHub release
         if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ runner.temp }}/shadow_build_dir/package/${{ matrix.ARTIFACT }}
-          asset_name: ${{ matrix.ARTIFACT }}
+          file: ${{ env.APK_PATH }}
+          asset_name: ${{ env.APK_FILENAME }}
           tag: ${{ github.ref }}
           overwrite: true
 #      - name: Upload build to S3 Bucket
