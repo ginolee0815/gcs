@@ -208,6 +208,17 @@ public class QGCActivity extends QtActivity
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
+
+        getWindow().getDecorView().setOnApplyWindowInsetsListener(new android.view.View.OnApplyWindowInsetsListener() {
+                    @Override
+                    public android.view.WindowInsets onApplyWindowInsets(android.view.View v, android.view.WindowInsets insets) {
+                        // 強制回傳一個邊距全為 0 的 Insets 給 Qt
+                        // 這樣 Qt 5 就會認為底部沒有任何障礙物，從而填滿畫面
+                        return insets.consumeSystemWindowInsets();
+                    }
+        });
+
+
         nativeInit();
         PowerManager pm = (PowerManager)_instance.getSystemService(Context.POWER_SERVICE);
         _wakeLock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "QGroundControl");
@@ -271,7 +282,10 @@ public class QGCActivity extends QtActivity
     @Override
     public void onResume() {
         super.onResume();
+        Log.i(TAG, "onResume");
 
+        // 觸發一次重新計算
+        getWindow().getDecorView().requestApplyInsets();
         // Plug in of USB ACCESSORY triggers only onResume event.
         // Then we scan if there is actually anything new
         probeAccessories();
