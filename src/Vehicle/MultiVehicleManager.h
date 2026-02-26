@@ -97,6 +97,7 @@ private slots:
 
 private:
     bool _vehicleExists(int vehicleId);
+    void _sendVehicleIdToH7(int vehicleId);
 
     bool        _activeVehicleAvailable;            ///< true: An active vehicle is available
     bool        _parameterReadyVehicleAvailable;    ///< true: An active vehicle with ready parameters is available

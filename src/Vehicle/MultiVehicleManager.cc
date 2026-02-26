@@ -19,6 +19,10 @@
 #include "QGCOptions.h"
 #include "LinkManager.h"
 
+#ifdef __android__
+#include <QtAndroidExtras/QAndroidJniObject>
+#endif
+
 #if defined (__ios__) || defined(__android__)
 #include "MobileScreenMgr.h"
 #endif
@@ -306,7 +310,25 @@ void MultiVehicleManager::_setActiveVehiclePhase2(void)
             _parameterReadyVehicleAvailable = true;
             emit parameterReadyVehicleAvailableChanged(true);
         }
+
+        // Send vehicle ID to H7 chip via serial port
+        _sendVehicleIdToH7(_activeVehicle->id());
     }
+}
+
+/// Send the active vehicle ID to the H7 chip via JNI call to QGCActivity.sendVehicleIdToH7()
+void MultiVehicleManager::_sendVehicleIdToH7(int vehicleId)
+{
+#ifdef __android__
+    QAndroidJniObject::callStaticMethod<void>(
+        "org/mavlink/qgroundcontrol/QGCActivity",
+        "sendVehicleIdToH7",
+        "(I)V",
+        vehicleId);
+    qCDebug(MultiVehicleManagerLog) << "Sent vehicle ID" << vehicleId << "to H7 via JNI";
+#else
+    Q_UNUSED(vehicleId)
+#endif
 }
 
 void MultiVehicleManager::_coordinateChanged(QGeoCoordinate coordinate)
