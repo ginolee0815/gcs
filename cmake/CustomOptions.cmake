@@ -54,12 +54,6 @@ set(QGC_COVERAGE_BRANCH_THRESHOLD 20 CACHE STRING "Minimum branch coverage perce
 set(QGC_VALGRIND_TIMEOUT_MULTIPLIER 20 CACHE STRING "Timeout multiplier for Valgrind")
 
 # ============================================================================
-# Feature Flags
-# ============================================================================
-
-option(QGC_VIEWER3D "Enable 3D Viewer (requires Qt Quick 3D)" ON)
-
-# ============================================================================
 # Compression Format Options
 # ============================================================================
 # Core formats (gzip, xz, zstd, zip) are always enabled.
@@ -75,7 +69,6 @@ option(QGC_ENABLE_LZ4 "Enable LZ4 decompression support" OFF)
 # Communication Options
 # ============================================================================
 
-option(QGC_ENABLE_BLUETOOTH "Enable Bluetooth communication links" ON)
 option(QGC_ZEROCONF_ENABLED "Enable ZeroConf/Bonjour discovery" OFF)
 option(QGC_NO_SERIAL_LINK "Disable serial port communication" OFF)
 
