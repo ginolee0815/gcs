@@ -314,6 +314,33 @@ void Joystick::_loadSettings()
     }
     badSettings |= workingAxis < 4;
 
+    // Ensure gimbal axes have valid default mappings if not previously saved
+    if(_rgFunctionAxis[gimbalPitchFunction] < 0 && _axisCount > 3) {
+        _rgFunctionAxis[gimbalPitchFunction] = 3;
+        //qDebug() << "gimbalPitchFunction defaulted to axis 3";
+    }
+    if(_rgFunctionAxis[gimbalYawFunction] < 0 && _axisCount > 4) {
+        _rgFunctionAxis[gimbalYawFunction] = 4;
+        //qDebug() << "gimbalYawFunction defaulted to axis 4";
+    }
+
+    // Ensure gimbal axes have valid calibration (min/max != 0), otherwise use full range defaults
+    for (int func = gimbalPitchFunction; func <= gimbalYawFunction; func++) {
+        int ax = _rgFunctionAxis[func];
+        if (ax >= 0 && ax < _axisCount) {
+            if (_rgCalibration[ax].min == 0 && _rgCalibration[ax].max == 0) {
+                _rgCalibration[ax].min = -32768;
+                _rgCalibration[ax].max = 32767;
+                _rgCalibration[ax].center = 0;
+                //qDebug() << "Gimbal axis" << ax << "calibration defaulted to full range";
+            }
+        }
+    }
+
+    //qDebug() << "_loadSettings gimbal mapping - gimbalPitchAxis:" << _rgFunctionAxis[gimbalPitchFunction]
+    //         << "gimbalYawAxis:" << _rgFunctionAxis[gimbalYawFunction]
+    //         << "axisCount:" << _axisCount;
+
     // FunctionAxis mappings are always stored in TX mode 2
     // Remap to stored TX mode in settings
     _remapAxes(2, _transmitterMode, _rgFunctionAxis);
@@ -649,12 +676,16 @@ void Joystick::_handleAxis()
 
             if(_axisCount > 4) {
                 axis = _rgFunctionAxis[gimbalPitchFunction];
-                gimbalPitch = _adjustRange(_rgAxisValues[axis], _rgCalibration[axis],_deadband);
+                if(axis >= 0 && axis < _axisCount) {
+                    gimbalPitch = _adjustRange(_rgAxisValues[axis], _rgCalibration[axis], _deadband);
+                }
             }
 
             if(_axisCount > 5) {
                 axis = _rgFunctionAxis[gimbalYawFunction];
-                gimbalYaw = _adjustRange(_rgAxisValues[axis],   _rgCalibration[axis],_deadband);
+                if(axis >= 0 && axis < _axisCount) {
+                    gimbalYaw = _adjustRange(_rgAxisValues[axis], _rgCalibration[axis], _deadband);
+                }
             }
 
             if (_accumulator) {
@@ -694,6 +725,9 @@ void Joystick::_handleAxis()
             } else {
                 throttle = (throttle + 1.0f) / 2.0f;
             }
+            //qDebug() << "_handleAxis gimbalPitch:" << gimbalPitch << "gimbalYaw:" << gimbalYaw
+            //         << "gimbalPitchAxis:" << _rgFunctionAxis[gimbalPitchFunction]
+            //         << "gimbalYawAxis:" << _rgFunctionAxis[gimbalYawFunction];
             qCDebug(JoystickValuesLog) << "name:roll:pitch:yaw:throttle:gimbalPitch:gimbalYaw" << name() << roll << -pitch << yaw << throttle << gimbalPitch << gimbalYaw;
             // NOTE: The buttonPressedBits going to MANUAL_CONTROL are currently used by ArduSub (and it only handles 16 bits)
             // Set up button bitmap
@@ -708,7 +742,7 @@ void Joystick::_handleAxis()
             emit axisValues(roll, pitch, yaw, throttle);
 
             uint16_t shortButtons = static_cast<uint16_t>(buttonPressedBits & 0xFFFF);
-            _activeVehicle->sendJoystickDataThreadSafe(roll, pitch, yaw, throttle, shortButtons);
+            _activeVehicle->sendJoystickDataThreadSafe(roll, pitch, yaw, throttle, shortButtons, gimbalPitch, gimbalYaw);
         }
     }
 }

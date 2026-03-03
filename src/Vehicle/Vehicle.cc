@@ -4431,7 +4431,8 @@ void Vehicle::clearAllParamMapRC(void)
     }
 }
 
-void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, float thrust, quint16 buttons)
+void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, float thrust, quint16 buttons,
+                                         float gimbalPitch, float gimbalYaw)
 {
     SharedLinkInterfacePtr sharedLink = vehicleLinkManager()->primaryLink().lock();
     if (!sharedLink) {
@@ -4451,6 +4452,8 @@ void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, flo
     float newPitchCommand  =    pitch * axesScaling;    // Joystick data is reverse of mavlink values
     float newYawCommand    =    yaw * axesScaling;
     float newThrustCommand =    thrust * axesScaling;
+    float newGimbalPitchCmd =   gimbalPitch * axesScaling;
+    float newGimbalYawCmd  =    gimbalYaw * axesScaling;
 
     mavlink_msg_manual_control_pack_chan(
                 static_cast<uint8_t>(_mavlink->getSystemId()),
@@ -4463,8 +4466,36 @@ void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, flo
                 static_cast<int16_t>(newThrustCommand),
                 static_cast<int16_t>(newYawCommand),
                 buttons,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                0,                                                  // buttons2
+                0x03,                                               // enabled_extensions: bit0=s valid, bit1=t valid
+                static_cast<int16_t>(newGimbalPitchCmd),            // s  -> CH5
+                static_cast<int16_t>(newGimbalYawCmd),              // t  -> CH6
+                0, 0, 0, 0, 0, 0);                                 // aux1-6
     sendMessageOnLinkThreadSafe(sharedLink.get(), message);
+
+    // Also send RC_CHANNELS_OVERRIDE for CH5/CH6 for FC that don't support MANUAL_CONTROL extensions
+    // Convert from -1:1 range to RC PWM range (1000-2000us), center at 1500
+    uint16_t ch5_pwm = static_cast<uint16_t>(1500 + gimbalPitch * 500.0f);
+    uint16_t ch6_pwm = static_cast<uint16_t>(1500 + gimbalYaw * 500.0f);
+
+    mavlink_message_t overrideMsg;
+    mavlink_msg_rc_channels_override_pack_chan(
+                static_cast<uint8_t>(_mavlink->getSystemId()),
+                static_cast<uint8_t>(_mavlink->getComponentId()),
+                sharedLink->mavlinkChannel(),
+                &overrideMsg,
+                static_cast<uint8_t>(_id),      // target_system
+                _defaultComponentId,             // target_component
+                UINT16_MAX,                      // CH1 - do not override
+                UINT16_MAX,                      // CH2 - do not override
+                UINT16_MAX,                      // CH3 - do not override
+                UINT16_MAX,                      // CH4 - do not override
+                ch5_pwm,                         // CH5 - gimbalPitch
+                ch6_pwm,                         // CH6 - gimbalYaw
+                UINT16_MAX,                      // CH7 - do not override
+                UINT16_MAX,                      // CH8 - do not override
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0);  // CH9-18
+    sendMessageOnLinkThreadSafe(sharedLink.get(), overrideMsg);
 }
 
 void Vehicle::triggerSimpleCamera()
