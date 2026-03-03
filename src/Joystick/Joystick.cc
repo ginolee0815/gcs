@@ -248,6 +248,38 @@ void Joystick::_vehicleCountChanged(int count)
     }
 }
 
+void Joystick::_applyExtendedAxisDefaults()
+{
+    // Ensure gimbal/slider/switch axes have valid default mappings if not previously saved
+    if(_rgFunctionAxis[gimbalPitchFunction] < 0 && _axisCount > 3) {
+        _rgFunctionAxis[gimbalPitchFunction] = 3;
+    }
+    if(_rgFunctionAxis[gimbalYawFunction] < 0 && _axisCount > 4) {
+        _rgFunctionAxis[gimbalYawFunction] = 4;
+    }
+    if(_rgFunctionAxis[sliderLFunction] < 0 && _axisCount > 2) {
+        _rgFunctionAxis[sliderLFunction] = 2;
+    }
+    if(_rgFunctionAxis[sliderRFunction] < 0 && _axisCount > 1) {
+        _rgFunctionAxis[sliderRFunction] = 1;
+    }
+    if(_rgFunctionAxis[switchFunction] < 0 && _axisCount > 0) {
+        _rgFunctionAxis[switchFunction] = 0;
+    }
+
+    // Ensure extended axes have valid calibration (min/max != 0), otherwise use full range defaults
+    for (int func = gimbalPitchFunction; func <= switchFunction; func++) {
+        int ax = _rgFunctionAxis[func];
+        if (ax >= 0 && ax < _axisCount) {
+            if (_rgCalibration[ax].min == 0 && _rgCalibration[ax].max == 0) {
+                _rgCalibration[ax].min = -32768;
+                _rgCalibration[ax].max = 32767;
+                _rgCalibration[ax].center = 0;
+            }
+        }
+    }
+}
+
 void Joystick::_loadSettings()
 {
     QSettings settings;
@@ -320,34 +352,7 @@ void Joystick::_loadSettings()
     }
     badSettings |= workingAxis < 4;
 
-    // Ensure gimbal/slider axes have valid default mappings if not previously saved
-    if(_rgFunctionAxis[gimbalPitchFunction] < 0 && _axisCount > 3) {
-        _rgFunctionAxis[gimbalPitchFunction] = 3;
-    }
-    if(_rgFunctionAxis[gimbalYawFunction] < 0 && _axisCount > 4) {
-        _rgFunctionAxis[gimbalYawFunction] = 4;
-    }
-    if(_rgFunctionAxis[sliderLFunction] < 0 && _axisCount > 2) {
-        _rgFunctionAxis[sliderLFunction] = 2;
-    }
-    if(_rgFunctionAxis[sliderRFunction] < 0 && _axisCount > 1) {
-        _rgFunctionAxis[sliderRFunction] = 1;
-    }
-    if(_rgFunctionAxis[switchFunction] < 0 && _axisCount > 0) {
-        _rgFunctionAxis[switchFunction] = 0;
-    }
-
-    // Ensure gimbal/slider axes have valid calibration (min/max != 0), otherwise use full range defaults
-    for (int func = gimbalPitchFunction; func <= switchFunction; func++) {
-        int ax = _rgFunctionAxis[func];
-        if (ax >= 0 && ax < _axisCount) {
-            if (_rgCalibration[ax].min == 0 && _rgCalibration[ax].max == 0) {
-                _rgCalibration[ax].min = -32768;
-                _rgCalibration[ax].max = 32767;
-                _rgCalibration[ax].center = 0;
-            }
-        }
-    }
+    _applyExtendedAxisDefaults();
 
     //qDebug() << "_loadSettings gimbal mapping - gimbalPitchAxis:" << _rgFunctionAxis[gimbalPitchFunction]
     //         << "gimbalYawAxis:" << _rgFunctionAxis[gimbalYawFunction]
@@ -446,6 +451,9 @@ void Joystick::_saveSettings()
         qCDebug(JoystickLog) << "_saveSettings name:function:axis" << _name << function << _rgFunctionSettingsKey[function];
     }
     _saveButtonSettings();
+
+    // Apply extended axis defaults after save to ensure gimbal/slider/switch work immediately after calibration
+    _applyExtendedAxisDefaults();
 }
 
 // Relative mappings of axis functions between different TX modes
@@ -795,6 +803,8 @@ void Joystick::startPolling(Vehicle* vehicle)
         }
         // Always set up the new vehicle
         _activeVehicle = vehicle;
+        // Apply extended axis defaults to ensure gimbal/slider/switch axes are mapped
+        _applyExtendedAxisDefaults();
         // If joystick is not calibrated, disable it
         if ( axisCount() != 0 && !_calibrated ) {
             vehicle->setJoystickEnabled(false);

@@ -238,6 +238,7 @@ protected:
     void    _handleAxis             ();
     void    _handleButtons          ();
     void    _buildActionList        (Vehicle* activeVehicle);
+    void    _applyExtendedAxisDefaults();
 
 private:
     virtual bool _open      ()          = 0;
