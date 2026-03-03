@@ -492,7 +492,8 @@ public:
     bool joystickEnabled            () const;
     void setJoystickEnabled         (bool enabled);
     void sendJoystickDataThreadSafe (float roll, float pitch, float yaw, float thrust, quint16 buttons,
-                                     float gimbalPitch = 0.0f, float gimbalYaw = 0.0f);
+                                     float gimbalPitch = 0.0f, float gimbalYaw = 0.0f,
+                                     float sliderL = 0.0f, float sliderR = 0.0f);
 
     // Property accesors
     int id() const{ return _id; }

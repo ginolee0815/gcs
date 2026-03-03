@@ -79,6 +79,8 @@ public:
         throttleFunction,
         gimbalPitchFunction,
         gimbalYawFunction,
+        sliderLFunction,
+        sliderRFunction,
         maxFunction
     } AxisFunction_t;
 
