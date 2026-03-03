@@ -4433,7 +4433,8 @@ void Vehicle::clearAllParamMapRC(void)
 
 void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, float thrust, quint16 buttons,
                                          float gimbalPitch, float gimbalYaw,
-                                         float sliderL, float sliderR)
+                                         float sliderL, float sliderR,
+                                         float switchVal)
 {
     SharedLinkInterfacePtr sharedLink = vehicleLinkManager()->primaryLink().lock();
     if (!sharedLink) {
@@ -4457,6 +4458,7 @@ void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, flo
     float newGimbalYawCmd  =    gimbalYaw * axesScaling;
     float newSliderLCmd    =    sliderL * axesScaling;
     float newSliderRCmd    =    sliderR * axesScaling;
+    float newSwitchCmd     =    switchVal * axesScaling;
 
     mavlink_msg_manual_control_pack_chan(
                 static_cast<uint8_t>(_mavlink->getSystemId()),
@@ -4470,12 +4472,13 @@ void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, flo
                 static_cast<int16_t>(newYawCommand),
                 buttons,
                 0,                                                  // buttons2
-                0x0F,                                               // enabled_extensions: bit0=s, bit1=t, bit2=aux1, bit3=aux2
+                0x1F,                                               // enabled_extensions: bit0=s, bit1=t, bit2=aux1, bit3=aux2, bit4=aux3
                 static_cast<int16_t>(newGimbalPitchCmd),            // s    -> CH5
                 static_cast<int16_t>(newGimbalYawCmd),              // t    -> CH6
                 static_cast<int16_t>(newSliderLCmd),                // aux1 -> CH7
                 static_cast<int16_t>(newSliderRCmd),                // aux2 -> CH8
-                0, 0, 0, 0);                                       // aux3-6
+                static_cast<int16_t>(newSwitchCmd),                 // aux3 -> CH9
+                0, 0, 0);                                          // aux4-6
     sendMessageOnLinkThreadSafe(sharedLink.get(), message);
 
     // Also send RC_CHANNELS_OVERRIDE for FC that don't support MANUAL_CONTROL extensions
@@ -4484,6 +4487,7 @@ void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, flo
     uint16_t ch6_pwm = static_cast<uint16_t>(1500 + gimbalYaw * 500.0f);
     uint16_t ch7_pwm = static_cast<uint16_t>(1500 + sliderL * 500.0f);
     uint16_t ch8_pwm = static_cast<uint16_t>(1500 + sliderR * 500.0f);
+    uint16_t ch9_pwm = static_cast<uint16_t>(1500 + switchVal * 500.0f);
 
     mavlink_message_t overrideMsg;
     mavlink_msg_rc_channels_override_pack_chan(
@@ -4501,7 +4505,8 @@ void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, flo
                 ch6_pwm,                         // CH6 - gimbalYaw
                 ch7_pwm,                         // CH7 - sliderL
                 ch8_pwm,                         // CH8 - sliderR
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0);  // CH9-18
+                ch9_pwm,                         // CH9 - switch
+                0, 0, 0, 0, 0, 0, 0, 0, 0);     // CH10-18
     sendMessageOnLinkThreadSafe(sharedLink.get(), overrideMsg);
 }
 

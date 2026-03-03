@@ -81,6 +81,7 @@ public:
         gimbalYawFunction,
         sliderLFunction,
         sliderRFunction,
+        switchFunction,
         maxFunction
     } AxisFunction_t;
 

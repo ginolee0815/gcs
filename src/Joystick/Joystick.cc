@@ -81,7 +81,8 @@ const char* Joystick::_rgFunctionSettingsKey[Joystick::maxFunction] = {
     "GimbalPitchAxis",
     "GimbalYawAxis",
     "SliderLAxis",
-    "SliderRAxis"
+    "SliderRAxis",
+    "SwitchAxis"
 };
 
 int Joystick::_transmitterMode = 2;
@@ -183,8 +184,9 @@ void Joystick::_setDefaultCalibration(void) {
 
     _rgFunctionAxis[gimbalPitchFunction]= 3;
     _rgFunctionAxis[gimbalYawFunction]  = 4;
-    _rgFunctionAxis[sliderLFunction]    = 1;
-    _rgFunctionAxis[sliderRFunction]    = 0;
+    _rgFunctionAxis[sliderLFunction]    = 2;
+    _rgFunctionAxis[sliderRFunction]    = 1;
+    _rgFunctionAxis[switchFunction]     = 0;
 
     _exponential        = 0;
     _accumulator        = false;
@@ -325,15 +327,18 @@ void Joystick::_loadSettings()
     if(_rgFunctionAxis[gimbalYawFunction] < 0 && _axisCount > 4) {
         _rgFunctionAxis[gimbalYawFunction] = 4;
     }
-    if(_rgFunctionAxis[sliderLFunction] < 0 && _axisCount > 1) {
-        _rgFunctionAxis[sliderLFunction] = 1;
+    if(_rgFunctionAxis[sliderLFunction] < 0 && _axisCount > 2) {
+        _rgFunctionAxis[sliderLFunction] = 2;
     }
-    if(_rgFunctionAxis[sliderRFunction] < 0 && _axisCount > 0) {
-        _rgFunctionAxis[sliderRFunction] = 0;
+    if(_rgFunctionAxis[sliderRFunction] < 0 && _axisCount > 1) {
+        _rgFunctionAxis[sliderRFunction] = 1;
+    }
+    if(_rgFunctionAxis[switchFunction] < 0 && _axisCount > 0) {
+        _rgFunctionAxis[switchFunction] = 0;
     }
 
     // Ensure gimbal/slider axes have valid calibration (min/max != 0), otherwise use full range defaults
-    for (int func = gimbalPitchFunction; func <= sliderRFunction; func++) {
+    for (int func = gimbalPitchFunction; func <= switchFunction; func++) {
         int ax = _rgFunctionAxis[func];
         if (ax >= 0 && ax < _axisCount) {
             if (_rgCalibration[ax].min == 0 && _rgCalibration[ax].max == 0) {
@@ -445,11 +450,11 @@ void Joystick::_saveSettings()
 
 // Relative mappings of axis functions between different TX modes
 int Joystick::_mapFunctionMode(int mode, int function) {
-    static const int mapping[][8] = {
-        { yawFunction, pitchFunction, rollFunction, throttleFunction, gimbalPitchFunction, gimbalYawFunction, sliderLFunction, sliderRFunction },
-        { yawFunction, throttleFunction, rollFunction, pitchFunction, gimbalPitchFunction, gimbalYawFunction, sliderLFunction, sliderRFunction },
-        { rollFunction, pitchFunction, yawFunction, throttleFunction, gimbalPitchFunction, gimbalYawFunction, sliderLFunction, sliderRFunction },
-        { rollFunction, throttleFunction, yawFunction, pitchFunction, gimbalPitchFunction, gimbalYawFunction, sliderLFunction, sliderRFunction }};
+    static const int mapping[][9] = {
+        { yawFunction, pitchFunction, rollFunction, throttleFunction, gimbalPitchFunction, gimbalYawFunction, sliderLFunction, sliderRFunction, switchFunction },
+        { yawFunction, throttleFunction, rollFunction, pitchFunction, gimbalPitchFunction, gimbalYawFunction, sliderLFunction, sliderRFunction, switchFunction },
+        { rollFunction, pitchFunction, yawFunction, throttleFunction, gimbalPitchFunction, gimbalYawFunction, sliderLFunction, sliderRFunction, switchFunction },
+        { rollFunction, throttleFunction, yawFunction, pitchFunction, gimbalPitchFunction, gimbalYawFunction, sliderLFunction, sliderRFunction, switchFunction }};
     return mapping[mode-1][function];
 }
 
@@ -696,7 +701,7 @@ void Joystick::_handleAxis()
                 }
             }
 
-            // SliderL -> CH7, SliderR -> CH8
+            // SliderL -> CH7, SliderR -> CH8, Switch -> CH9
             axis = _rgFunctionAxis[sliderLFunction];
             if(axis >= 0 && axis < _axisCount) {
                 sliderL = _adjustRange(_rgAxisValues[axis], _rgCalibration[axis], _deadband);
@@ -704,6 +709,11 @@ void Joystick::_handleAxis()
             axis = _rgFunctionAxis[sliderRFunction];
             if(axis >= 0 && axis < _axisCount) {
                 sliderR = _adjustRange(_rgAxisValues[axis], _rgCalibration[axis], _deadband);
+            }
+            float switchVal = 0.0f;
+            axis = _rgFunctionAxis[switchFunction];
+            if(axis >= 0 && axis < _axisCount) {
+                switchVal = _adjustRange(_rgAxisValues[axis], _rgCalibration[axis], _deadband);
             }
 
             if (_accumulator) {
@@ -760,7 +770,7 @@ void Joystick::_handleAxis()
             emit axisValues(roll, pitch, yaw, throttle);
 
             uint16_t shortButtons = static_cast<uint16_t>(buttonPressedBits & 0xFFFF);
-            _activeVehicle->sendJoystickDataThreadSafe(roll, pitch, yaw, throttle, shortButtons, gimbalPitch, gimbalYaw, sliderL, sliderR);
+            _activeVehicle->sendJoystickDataThreadSafe(roll, pitch, yaw, throttle, shortButtons, gimbalPitch, gimbalYaw, sliderL, sliderR, switchVal);
         }
     }
 }
