@@ -87,7 +87,8 @@ SetupPage {
                                 width:          ScreenTools.defaultFontPixelWidth * 15
                                 model:          [ qsTr("Not assigned"), qsTr("Channel 1"), qsTr("Channel 2"),
                                     qsTr("Channel 3"),    qsTr("Channel 4"), qsTr("Channel 5"),
-                                    qsTr("Channel 6"),    qsTr("Channel 7"), qsTr("Channel 8") ]
+                                    qsTr("Channel 6"),    qsTr("Channel 7"), qsTr("Channel 8"),
+                                    qsTr("Channel 9") ]
 
                                 currentIndex:   _fltmodeCh.value
                                 onActivated:    _fltmodeCh.value = index
