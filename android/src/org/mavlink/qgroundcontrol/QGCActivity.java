@@ -964,7 +964,6 @@ public class QGCActivity extends QtActivity {
             _h7ExpectedVehicleId = vehicleId;
 
             // Step 3: Send RCGetSystemID after a short delay
-            final int delayMs = 200 * (_h7RetryCount + 1); // Increase delay on retries
             new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
                 @Override
                 public void run() {
@@ -978,7 +977,7 @@ public class QGCActivity extends QtActivity {
                         Log.e(TAG, "Failed to send RCGetSystemID: " + e.getMessage());
                     }
                 }
-            }, delayMs);
+            }, 300);
 
             // Step 4: Timeout - if no response, retry or clean up
             new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
@@ -999,7 +998,7 @@ public class QGCActivity extends QtActivity {
                         }
                     }
                 }
-            }, 3000);
+            }, 1500);
 
         } catch (Exception e) {
             Log.e(TAG, "Failed to send vehicle ID to H7: " + e.getMessage());
