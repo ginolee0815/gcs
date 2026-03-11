@@ -11,6 +11,7 @@ import QGroundControl.FlightMap
 import QGroundControl.Controls
 import QGroundControl.FactControls
 import QGroundControl.FlyView
+import QGroundControl.Toolbar
 
 Item {
     id: _root
@@ -32,6 +33,8 @@ Item {
     property bool   _promptForPlanUsageShowing: false
     property bool   _addROIOnClick: false
     property bool   _addWaypointOnClick: false
+    property bool   _homeTrackingMapCenter: true
+    property bool   _updatingHomeFromMapCenter: false
 
     readonly property int _layerMission: 1
     readonly property int _layerFence: 2
@@ -159,6 +162,29 @@ Item {
         }
     }
 
+    // Stop tracking map center when the home position is changed externally (e.g. drag, file load)
+    Connections {
+        target: _visualItems.get(0)
+        function onCoordinateChanged() {
+            if (!_updatingHomeFromMapCenter && !_planMasterController.containsItems) {
+                _homeTrackingMapCenter = false
+            }
+        }
+    }
+
+    // Resume tracking when the plan becomes empty again
+    Connections {
+        target: _planMasterController
+        function onContainsItemsChanged() {
+            if (!_planMasterController.containsItems) {
+                _homeTrackingMapCenter = true
+                _updatingHomeFromMapCenter = true
+                _visualItems.get(0).coordinate = editorMap.center
+                _updatingHomeFromMapCenter = false
+            }
+        }
+    }
+
     function insertSimpleItemAfterCurrent(coordinate) {
         var nextIndex = _missionController.currentPlanViewVIIndex + 1
         _missionController.insertSimpleMissionItem(coordinate, nextIndex, true /* makeCurrentItem */)
@@ -217,6 +243,7 @@ Item {
     PlanViewToolBar {
         id: planToolBar
         planMasterController: _planMasterController
+        showRallyPointsHelp: _editingLayer === _layerRally
     }
 
     Item {
@@ -252,11 +279,21 @@ Item {
             }
             onCenterChanged: {
                 QGroundControl.flightMapPosition = editorMap.center
+                if (_homeTrackingMapCenter && !_planMasterController.containsItems) {
+                    _updatingHomeFromMapCenter = true
+                    _visualItems.get(0).coordinate = editorMap.center
+                    _updatingHomeFromMapCenter = false
+                }
             }
 
             onMapClicked: (mouse) => {
                 // Take focus to close any previous editing
                 editorMap.focus = true
+
+                // Collapse layer switcher on any map click
+                layerSwitcher.expanded = false
+                collapseTimer.stop()
+
                 if (!mainWindow.allowViewSwitch()) {
                     return
                 }
@@ -449,7 +486,7 @@ Item {
                         id: roiButton
                         text: qsTr("ROI")
                         iconSource: "/qmlimages/roi.svg"
-                        visible: toolStrip._isMissionLayer && _planMasterController.controllerVehicle.roiModeSupported
+                        visible: toolStrip._isMissionLayer && _planMasterController.controllerVehicle.supports.roiMode
                         checkable: true
                         onTriggered: { _addROIOnClick = !_addROIOnClick; if (_addROIOnClick) _addWaypointOnClick = false }
                     },
@@ -494,6 +531,109 @@ Item {
             width: _rightPanelWidth
             planMasterController: _planMasterController
             editorMap: editorMap
+            onEditingLayerChangeRequested: (layer) => _editingLayer = layer
+        }
+
+        // Layer switching icons — only active icon visible; click to expand choices leftward
+        Item {
+            id:                     layerSwitcher
+            anchors.right:          rightPanel.left
+            anchors.rightMargin:    _toolsMargin
+            anchors.top:            parent.top
+            anchors.topMargin:      _toolsMargin
+            width:                  layerRow.width
+            height:                 _layerButtonSize
+            z:                      QGroundControl.zOrderWidgets
+
+            property bool   expanded: false
+            property real   _layerButtonSize: ScreenTools.defaultFontPixelHeight * 2.0
+            property real   _spacing: ScreenTools.defaultFontPixelHeight * 0.25
+
+            readonly property var _layers: [
+                { layer: _layerMission, icon: "/res/waypoint.svg",      nodeType: "missionGroup" },
+                { layer: _layerFence,   icon: "/res/GeoFence.svg",      nodeType: "fenceGroup" },
+                { layer: _layerRally,   icon: "/res/RallyPoint.svg",    nodeType: "rallyGroup" }
+            ]
+
+            Timer {
+                id: collapseTimer
+                interval: 5000
+                onTriggered: layerSwitcher.expanded = false
+            }
+
+            function toggle() {
+                expanded = !expanded
+                if (expanded) {
+                    collapseTimer.restart()
+                } else {
+                    collapseTimer.stop()
+                }
+            }
+
+            function choose(nodeType) {
+                expanded = false
+                collapseTimer.stop()
+                rightPanel.selectLayer(nodeType)
+            }
+
+            // Row laid out right-to-left: active icon on the right, choices expand left
+            Row {
+                id:             layerRow
+                anchors.right:  parent.right
+                spacing:        layerSwitcher._spacing
+                layoutDirection: Qt.RightToLeft
+
+                // Active layer button (always visible)
+                Rectangle {
+                    width:  layerSwitcher._layerButtonSize
+                    height: width
+                    radius: ScreenTools.defaultBorderRadius
+                    color:  QGroundControl.globalPalette.buttonHighlight
+
+                    QGCColoredImage {
+                        anchors.centerIn:   parent
+                        width:              parent.width * 0.6
+                        height:             width
+                        source:             layerSwitcher._layers.find(l => l.layer === _editingLayer)?.icon ?? "/res/waypoint.svg"
+                        color:              QGroundControl.globalPalette.buttonHighlightText
+                    }
+
+                    QGCMouseArea {
+                        anchors.fill: parent
+                        onClicked:    layerSwitcher.toggle()
+                    }
+                }
+
+                // Choice buttons (only layers that are NOT the current one)
+                Repeater {
+                    model: layerSwitcher._layers.filter(l => l.layer !== _editingLayer)
+
+                    Rectangle {
+                        required property var modelData
+                        width:   layerSwitcher._layerButtonSize
+                        height:  width
+                        radius:  ScreenTools.defaultBorderRadius
+                        color:   QGroundControl.globalPalette.button
+                        visible: opacity > 0
+                        opacity: layerSwitcher.expanded ? 1 : 0
+
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
+
+                        QGCColoredImage {
+                            anchors.centerIn:   parent
+                            width:              parent.width * 0.6
+                            height:             width
+                            source:             modelData.icon
+                            color:              QGroundControl.globalPalette.buttonText
+                        }
+
+                        QGCMouseArea {
+                            anchors.fill: parent
+                            onClicked:    layerSwitcher.choose(modelData.nodeType)
+                        }
+                    }
+                }
+            }
         }
 
         RowLayout {

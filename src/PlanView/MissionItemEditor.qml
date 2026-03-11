@@ -31,7 +31,7 @@ Rectangle {
     property var    _missionController:         _masterController.missionController
     property bool   _currentItem:               missionItem.isCurrentItem
     property color  _outerTextColor:            _currentItem ? qgcPal.buttonHighlightText : qgcPal.text
-    property bool   _noMissionItemsAdded:       ListView.view.model.count === 1
+    property bool   _noMissionItemsAdded:       _missionController.visualItems ? _missionController.visualItems.count <= 1 : true
     property real   _sectionSpacer:             ScreenTools.defaultFontPixelWidth / 2  // spacing between section headings
     property bool   _singleComplexItem:         _missionController.complexMissionItemNames.length === 1
     property bool   _readyForSave:              missionItem.readyForSaveState === VisualMissionItem.ReadyForSave
@@ -194,6 +194,7 @@ Rectangle {
 
         DropPanel {
             id: hamburgerMenuDropPanel
+            onClosed: destroy()
 
             sourceComponent: Component {
                 ColumnLayout {
@@ -271,7 +272,6 @@ Rectangle {
         }
     }
 
-
     QGCColoredImage {
         id:                     hamburger
         anchors.margins:        _margin
@@ -291,6 +291,7 @@ Rectangle {
                 position = Qt.point(position.x, position.y)
                 // For some strange reason using mainWindow in mapToItem doesn't work, so we use globals.parent instead which also gets us mainWindow
                 position = mapToItem(globals.parent, position)
+
                 var dropPanel = hamburgerMenuDropPanelComponent.createObject(mainWindow, { clickRect: Qt.rect(position.x, position.y, 0, 0) })
                 dropPanel.open()
             }
