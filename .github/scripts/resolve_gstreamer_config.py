@@ -7,15 +7,9 @@ import argparse
 import sys
 from pathlib import Path
 
-try:
-    from .setup_bootstrap import ensure_setup_imports
-except ImportError:
-    setup_dir = Path(__file__).resolve().parent
-    if str(setup_dir) not in sys.path:
-        sys.path.insert(0, str(setup_dir))
-    from setup_bootstrap import ensure_setup_imports
+from ci_bootstrap import ensure_tools_dir
 
-ensure_setup_imports()
+ensure_tools_dir(__file__)
 
 from common.build_config import get_build_config_value
 from common.gh_actions import write_github_output
@@ -33,7 +27,7 @@ def resolve_version(platform_name: str, requested_version: str) -> str:
     if requested_version:
         return requested_version
     version_key = VERSION_KEYS.get(platform_name, "gstreamer_default_version")
-    return get_build_config_value(version_key, start=Path(__file__).resolve())
+    return get_build_config_value(version_key)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -50,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
     outputs = {
         "py_cmd": "python3",
         "version": resolve_version(args.platform, args.version),
-        "qt_version": get_build_config_value("qt_version", start=Path(__file__).resolve()),
+        "qt_version": get_build_config_value("qt_version"),
     }
     write_github_output(outputs)
     print(f"Building GStreamer {outputs['version']} for {args.platform}")
